@@ -1,0 +1,43 @@
+1. Memory aloc for poc:
+lea	rax, -36[rbp]
+mov	esi, 42
+mov	rdi, rax
+call	PlainOldClass::set(int)
+
+For &*pb:
+mov	edi, 16
+call	_Znwm@PLT
+mov	rbx, rax
+mov	rdi, rbx
+call	CoolClass::CoolClass()
+
+
+2.poc is on stack, *pb on heap
+
+
+3. Poc constructor call doesnt exist, it has a default one which doesnt do anything
+
+
+4. Constructor call for *pb:
+mov	edi, 16
+call	_Znwm@PLT                ; operator new
+mov	rbx, rax                  ; spremi adresu
+mov	rdi, rbx
+call	CoolClass::CoolClass()   ; poziv konstruktora
+
+
+5. For poc compiler knows immediately what function its calling. Can be inlined.
+   For *pb exact function isnt known at compile time. Cant be inlined
+
+
+6. Code for CoolClass vtable init:
+.section	.data.rel.ro.local.vtable for CoolClass,"awG",@progbits,vtable for CoolClass,comdat
+.align 8
+.type	vtable for CoolClass, @object
+.size	vtable for CoolClass, 32
+vtable for CoolClass:
+	.quad	0
+	.quad	typeinfo for CoolClass
+	.quad	CoolClass::set(int)
+	.quad	CoolClass::get()
+
