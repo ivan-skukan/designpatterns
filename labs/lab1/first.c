@@ -3,7 +3,7 @@
 #include <string.h>
 
 
-typedef char const* (*PTRFUN)(); //?
+typedef char const* (*PTRFUN)();
 
 typedef struct {
   PTRFUN greet;
@@ -11,15 +11,15 @@ typedef struct {
 } vtable;
 
 typedef struct {
+  vtable* vtable;
   char* name;
-  vtable* vtable; //? Kasnije castamo type na potrebnu tablicu?
 } Animal;
 
 void animalPrintGreeting(Animal* p) {
   printf("%s pozdravlja: %s\n", p->name, p->vtable->greet());
 }
 void animalPrintMenu(Animal* p) {
-  printf("%s voli %s\n", p->name, p->vtable->menu()); // check
+  printf("%s voli %s\n", p->name, p->vtable->menu()); 
 }
 
 char const* dogGreet(void){
@@ -35,6 +35,8 @@ char const* catMenu(void){
   return "konzerviranu tunjevinu";
 }
 
+char const* location(){}
+
 vtable cat_table = {
   .greet = catGreet,
   .menu = catMenu
@@ -42,17 +44,17 @@ vtable cat_table = {
 vtable dog_table = {
   .greet = dogGreet,
   .menu = dogMenu
-}; // should these be created globally
+};
 
 void constructCat(char const* name, Animal* cat) {
   cat->name = (char*)malloc(strlen(name)+1);
-  strcpy(cat->name,name); //check all 
+  strcpy(cat->name,name); 
   cat->vtable = &cat_table;
 }
 
-void constructDog(char const* name, Animal* dog) { //check
+void constructDog(char const* name, Animal* dog) { 
   dog->name = (char*)malloc(strlen(name)+1);
-  strcpy(dog->name,name); //check all 
+  strcpy(dog->name,name); 
   dog->vtable = &dog_table;
 }
 
@@ -69,7 +71,7 @@ Animal* createDog(char const* name) {
 }
 
 void createNDogs(int n) {
-  Animal** dogs = (Animal**)malloc(sizeof(Animal*) * n); // check
+  Animal** dogs = (Animal**)malloc(sizeof(Animal*) * n); 
   for (int i = 0; i < n; i++) {
     char name[20];
     snprintf(name, sizeof(name), "Dog%d", i);
@@ -106,7 +108,7 @@ void testAnimals(void){
 void stackCreate(void) {
   Animal dog;
   dog.name = "doggo";
-  dog.vtable = &dog_table; // just call construct?
+  dog.vtable = &dog_table; 
 
   printf("Name: %s\n", dog.name);
   printf("menu: %s\n", dog.vtable->menu());

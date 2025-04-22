@@ -49,10 +49,10 @@ class Linear : public Unary_Function {
 
 int main() {
   Unary_Function *f1 = new Square(-2, 2);
-  printf("%zu\n", sizeof(*f1));
+  printf("%zu\n", sizeof(Square));
   f1->tabulate();
   Unary_Function *f2 = new Linear(-2, 2, 5, -2);
-  printf("%zu\n", sizeof(*f1));
+  printf("%zu\n", sizeof(Linear));
   f2->tabulate();
   printf("f1==f2: %s\n", Unary_Function::same_functions_for_ints(f1, f2, 1E-6) ? "DA" : "NE");
   printf("neg_val f2(1) = %lf\n", f2->negative_value_at(1.0));

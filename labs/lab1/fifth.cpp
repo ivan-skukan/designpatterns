@@ -17,7 +17,7 @@ void task(B* pb) {
     void** vtable = *(void***)pb;
 
     using Fn1 = int(*)(B*);
-    Fn1 f1 = (Fn1)vtable[0]; // kako zna offset?
+    Fn1 f1 = (Fn1)vtable[0]; 
     std::cout << f1(pb) << std::endl;
 
     using Fn2 = int(*)(B*, int);

@@ -14,13 +14,13 @@ typedef struct {
 } UF_vtable;
 
 struct Unary_Function {
+    UF_vtable* vtable;
     int lower_bound;
     int upper_bound;
-    UF_vtable* vtable;
 };
 
 typedef struct {
-    Unary_Function unary_parent; // shared state across multiple child objects?
+    Unary_Function unary_parent; 
 } Square;
 
 typedef struct {
@@ -38,7 +38,7 @@ void tabulate(Unary_Function* unary){
     } 
 }
 
-double square_valueat(Unary_Function* unary, int x) {return x*x;} // unary or square? cast?
+double square_valueat(Unary_Function* unary, int x) {return x*x;} 
 double linear_valueat(Unary_Function* unary, int x) {
     Linear* linear = (Linear*) unary;
     return linear->a * x + linear->b;
@@ -66,14 +66,14 @@ UF_vtable linear_funcs = {
     .nvalueat = nvalueat
 };
 
-void constructor_Unary(Unary_Function* uf, int lb, int ub, UF_vtable* funcs) { //void and cast?
+void constructor_Unary(Unary_Function* uf, int lb, int ub, UF_vtable* funcs) {
     //printf("ConstructorUnary\n");
     uf->lower_bound = lb;
     uf->upper_bound = ub;
     uf->vtable = funcs;
 }
 
-void constructor_Square(Square* sq, int lb, int ub) { // gpt kaze da brises ovo
+void constructor_Square(Square* sq, int lb, int ub) {
     //printf("Constructsq\n");
     Unary_Function uf;
     constructor_Unary(&uf, lb, ub, &square_funcs);
@@ -110,17 +110,17 @@ int main(int argc, char** argv) {
     
     // heap
     Unary_Function* square = (Unary_Function*)createSquare(lb,ub);
-    printf("%zu\n", sizeof(*square));
+    printf("%zu\n", sizeof(Square));
     tabulate(square);
     int a = 5; int b = -2;
     Unary_Function* linear = (Unary_Function*)createLinear(lb,ub, a, b);
-    printf("%zu\n", sizeof(*linear));
+    printf("%zu\n", sizeof(Linear));
     tabulate(linear);
     printf("f1==f2: %s\n", same_functions_for_ints(square, linear, 1E-6) ? "DA" : "NE");
     printf("neg_val f2(1) = %lf\n", linear->vtable->nvalueat(linear, 1.0));
     free(square);
     free(linear);
-    printf("Stack test\n");
+    // stack
     Square sq_stack;
     constructor_Square(&sq_stack, lb, ub);
     tabulate(&sq_stack.unary_parent);
