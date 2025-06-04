@@ -93,8 +93,22 @@ class TextEditorModel:
       self.notify_cursorObservers()
     return success
   
-
   def deleteBefore(self):
+    cur = self.cursorLocation
+    if cur.row == 0 and cur.column == 0:
+      return
+
+    if cur.column == 0:
+      prev_row = cur.row - 1
+      prev_col = len(self.lines[prev_row])
+      start = Location(prev_row, prev_col)
+    else:
+      start = Location(cur.row, cur.column - 1)
+
+    loc_range = LocationRange(start, cur)
+    self.deleteRange(loc_range)
+
+  def delete_before(self):
     if self.cursorLocation.column == 0:
       if self.cursorLocation.row == 0:
         return False
@@ -111,6 +125,20 @@ class TextEditorModel:
     return True
   
   def deleteAfter(self):
+    cur = self.cursorLocation
+    if cur.row == len(self.lines) - 1 and cur.column == len(self.lines[cur.row]):
+      return
+
+    if cur.column == len(self.lines[cur.row]):
+      next_loc = Location(cur.row + 1, 0)
+    else:
+      next_loc = Location(cur.row, cur.column + 1)
+
+    loc_range = LocationRange(cur, next_loc)
+    self.deleteRange(loc_range)
+  
+  def delete_after(self):
+    print(f"Before deletion: '{self.lines[self.cursorLocation.row]}' at {self.cursorLocation}")
     if self.cursorLocation.column == len(self.lines[self.cursorLocation.row]):
       if self.cursorLocation.row == len(self.lines) - 1:
         return False
@@ -119,6 +147,7 @@ class TextEditorModel:
         self.lines.pop(self.cursorLocation.row + 1)
     else:
       self.lines[self.cursorLocation.row] = self.lines[self.cursorLocation.row][:self.cursorLocation.column] + self.lines[self.cursorLocation.row][self.cursorLocation.column + 1:]
+    print(f"After deletion: '{self.lines[self.cursorLocation.row]}' at {self.cursorLocation}")
     self.notify_textObservers()
     return True
 
@@ -126,11 +155,9 @@ class TextEditorModel:
     if self.cursorLocation == Location(0, 0):
       return
 
-    start = r.LocationRange.locationStart
-    end = self.cursorLocation
-    deleted_text = self.get_text_range(start, end)
+    to_delete = self.getSelectedText(r)
 
-    action = DeleteAction(self, start, end, deleted_text)
+    action = DeleteAction(self, r.copy(), to_delete)
     self.undoManager.push(action)
     action.execute_do()
 

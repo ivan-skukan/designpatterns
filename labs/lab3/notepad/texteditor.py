@@ -7,7 +7,7 @@ from location import Location
 from locationrange import LocationRange
 from clipboardstack import ClipboardStack, ClipboardObserver
 
-font_size = 10
+font_size = 15
 
 class TextEditor(tk.Canvas, CursorObserver, TextObserver, ClipboardObserver):
   def __init__(self, root, tem: TextEditorModel=None, **kwargs):
@@ -86,7 +86,7 @@ class TextEditor(tk.Canvas, CursorObserver, TextObserver, ClipboardObserver):
         moved = self._tem.moveCursorUp()
     elif event.keysym == 'Down':
         moved = self._tem.moveCursorDown()
-    elif (event.char and ord(event.char) >= 32) or event.keysym == 'Return':
+    elif event.keysym == 'Return' or (event.char and event.keysym not in ('BackSpace', 'Delete') and ord(event.char) >= 32):
       if self._tem.getSelectionRange():
         self._tem.deleteRange(self._tem.getSelectionRange())
         self._tem.setSelectionRange(None)
@@ -103,6 +103,7 @@ class TextEditor(tk.Canvas, CursorObserver, TextObserver, ClipboardObserver):
         self._tem.setSelectionRange(None)
       else:
         self._tem.deleteAfter()
+      return 'break'
 
     if moved:
       new_cursor = self._tem.cursorLocation
@@ -154,7 +155,7 @@ class TextEditor(tk.Canvas, CursorObserver, TextObserver, ClipboardObserver):
   def updateCursorLocation(self, loc: Location = Location(0,0)):
     self.delete('cursor')
     row, column = loc.row, loc.column
-    self.create_line(1+self.char_width*column,(row*(font_size+5)),1+self.char_width*column,(row*(font_size+5)+font_size), fill='black', width=3, tags='cursor')
+    self.create_line(self.char_width*column,(row*(font_size+5)),self.char_width*column,(row*(font_size+5)+font_size), fill='black', width=3, tags='cursor')
 
   def updateClipboard(self):
     #useless

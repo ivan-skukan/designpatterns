@@ -5,5 +5,5 @@ class LocationRange:
     self.locationStart = locationStart
     self.locationEnd = locationEnd
   def copy(self):
-    return LocationRange(locationStart.copy(), locationEnd.copy())
+    return LocationRange(self.locationStart.copy(), self.locationEnd.copy())
 

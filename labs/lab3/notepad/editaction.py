@@ -38,12 +38,18 @@ class InsertAction(EditAction):
 class DeleteAction(EditAction):
   def __init__(self, model, location_range, deleted_text):
     self.model = model
-    self.range = location_range
+    start = location_range.locationStart
+    end = location_range.locationEnd
+
+    if (start.row > end.row) or (start.row == end.row and start.column > end.column):
+      start, end = end, start
+
+    self.range = LocationRange(start.copy(), end.copy())
     self.deleted_text = deleted_text
 
   def execute_do(self):
     self.model.cursorLocation = self.range.locationStart.copy()
-    self.model.deleteRange(self.range)
+    self.model.delete_range(self.range)
 
   def execute_undo(self):
     self.model.cursorLocation = self.range.locationStart.copy()
