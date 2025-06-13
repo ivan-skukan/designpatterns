@@ -31,12 +31,10 @@ class InsertAction(EditAction):
       # better way to handle new lines?
       return Location(self.location.row + 1, 0)
     lines = self.text.splitlines()
-    print(lines)
     row = self.location.row
     col = self.location.column
     endl = row + len(lines) - 1
     endc = len(lines[-1]) if len(lines) > 1 else self.location.column + len(self.text)
-    print(row, col, endl, endc)
     return Location(endl, endc)
 
 

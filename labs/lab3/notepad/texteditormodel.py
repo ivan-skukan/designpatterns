@@ -146,7 +146,6 @@ class TextEditorModel:
     self.deleteRange(loc_range)
   
   def delete_after(self):
-    print(f"Before deletion: '{self.lines[self.cursorLocation.row]}' at {self.cursorLocation}")
     if self.cursorLocation.column == len(self.lines[self.cursorLocation.row]):
       if self.cursorLocation.row == len(self.lines) - 1:
         return False
@@ -155,7 +154,6 @@ class TextEditorModel:
         self.lines.pop(self.cursorLocation.row + 1)
     else:
       self.lines[self.cursorLocation.row] = self.lines[self.cursorLocation.row][:self.cursorLocation.column] + self.lines[self.cursorLocation.row][self.cursorLocation.column + 1:]
-    print(f"After deletion: '{self.lines[self.cursorLocation.row]}' at {self.cursorLocation}")
     self.notify_textObservers()
     return True
 
