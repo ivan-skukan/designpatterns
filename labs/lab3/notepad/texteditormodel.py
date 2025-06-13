@@ -43,6 +43,14 @@ class TextEditorModel:
     for observer in self._textObservers:
       observer.updateText()
 
+  def moveCursorTo(self, loc: Location): # new, check for bugs
+    if loc.row < 0 or loc.row >= len(self.lines) or loc.column < 0 or loc.column > len(self.lines[loc.row]):
+      return False
+
+    self.cursorLocation = loc
+    self.notify_cursorObservers()
+    return True
+
   def moveCursorLeft(self):
     success = True
     if self.cursorLocation.column == 0:
@@ -162,6 +170,7 @@ class TextEditorModel:
     action.execute_do()
 
   def delete_range(self, r: LocationRange):
+
     start = r.locationStart
     end = r.locationEnd
     if (start.row > end.row) or (start.row == end.row and start.column > end.column):
@@ -189,6 +198,12 @@ class TextEditorModel:
   def setSelectionRange(self, r: LocationRange):
     self._selectionRange = r
     self.notify_textObservers() # new
+
+  def getText(self) -> str:
+    return '\n'.join(self.lines)
+
+  def setText(self, text: str):
+    ...
 
   def insert(self, txt: str):
     loc_copy = self.cursorLocation.copy()
