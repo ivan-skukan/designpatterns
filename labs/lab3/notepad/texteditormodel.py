@@ -195,13 +195,14 @@ class TextEditorModel:
   
   def setSelectionRange(self, r: LocationRange):
     self._selectionRange = r
-    self.notify_textObservers() # new
+    self.notify_textObservers() 
 
   def getText(self) -> str:
     return '\n'.join(self.lines)
 
-  def setText(self, text: str):
-    ...
+  def setText(self, text: str): # might wanna change this
+    self.deleteRange(LocationRange(Location(0, 0), Location(len(self.lines) - 1, len(self.lines[-1]))))
+    self.insert(text)
 
   def insert(self, txt: str):
     loc_copy = self.cursorLocation.copy()

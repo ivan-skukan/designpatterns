@@ -7,6 +7,11 @@ from textobserver import TextObserver
 from location import Location
 from locationrange import LocationRange
 from clipboardstack import ClipboardStack, ClipboardObserver
+from plugins.plugin import Plugin
+import importlib
+import pkgutil
+import inspect
+import os
 
 font_size = 15
 
@@ -16,6 +21,7 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
     self.root = root
     self._tem = tem
     self._clipboardStack = ClipboardStack()
+    self._plugins = []
 
     self.menu = tk.Menu(root)
     self.root.config(menu=self.menu)
@@ -23,6 +29,9 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
 
     self._canvas = tk.Canvas(self, bg='white')
     self._canvas.pack(fill=tk.BOTH, expand=True)
+
+    self._status = tk.Label(self, text='', anchor='w')
+    self._status.pack(fill=tk.X, side=tk.BOTTOM)
 
     self.font = tkfont.Font(family='Courier', size=font_size)
     self.char_width = self.font.measure('A')
@@ -36,28 +45,87 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
     self.updateDisplay()
 
   def _setup_menu(self):
-    file_menu = tk.Menu(self.menu, tearoff=0)
-    file_menu.add_command(label='Open', command=self.open_file)
-    file_menu.add_command(label='Save', command=self.save_file)
-    file_menu.add_command(label='Exit', command=self.root.quit)
-    self.menu.add_cascade(label='File', menu=file_menu)
+  # File menu
+    self.file_menu = tk.Menu(self.menu, tearoff=0)
+    self.menu.add_cascade(label='File', menu=self.file_menu)
 
-    edit_menu = tk.Menu(self.menu, tearoff=0)
-    edit_menu.add_command(label='Undo', command=self._tem.undoManager.undo)
-    edit_menu.add_command(label='Redo', command=self._tem.undoManager.redo)
-    edit_menu.add_separator()
-    edit_menu.add_command(label='Cut', command=self.cut)
-    edit_menu.add_command(label='Copy', command=self.copy)
-    edit_menu.add_command(label='Paste', command=lambda: self.paste(False))
-    edit_menu.add_command(label='Paste and Take', command=lambda: self.paste(True))
-    edit_menu.add_command(label='Delete Section', command=self.delete_section)
-    edit_menu.add_command(label='Clear Document', command=lambda: self._tem.setSelectionRange(None))
-    self.menu.add_cascade(label='Edit', menu=edit_menu)
+    self.file_menu.add_command(label='Open', command=self.open_file)
+    self.open_index = self.file_menu.index('end')
 
-    move_menu = tk.Menu(self.menu, tearoff=0)
-    move_menu.add_command(label='Cursor to Start', command=lambda: self._tem.moveCursorTo(Location(0, 0)))
-    move_menu.add_command(label='Cursor to End', command=lambda: self._tem.moveCursorTo(Location(len(self._tem.lines) - 1, len(self._tem.lines[-1]))))
-    self.menu.add_cascade(label='Move', menu=move_menu)
+    self.file_menu.add_command(label='Save', command=self.save_file)
+    self.save_index = self.file_menu.index('end')
+
+    self.file_menu.add_command(label='Exit', command=self.root.quit)
+    self.exit_index = self.file_menu.index('end')
+
+    # Edit menu
+    self.edit_menu = tk.Menu(self.menu, tearoff=0)
+    self.menu.add_cascade(label='Edit', menu=self.edit_menu)
+
+    self.edit_menu.add_command(label='Undo', command=self._tem.undoManager.undo)
+    self.undo_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_command(label='Redo', command=self._tem.undoManager.redo)
+    self.redo_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_separator()
+
+    self.edit_menu.add_command(label='Cut', command=self.cut)
+    self.cut_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_command(label='Copy', command=self.copy)
+    self.copy_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_command(label='Paste', command=lambda: self.paste(False))
+    self.paste_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_command(label='Paste and Take', command=lambda: self.paste(True))
+    self.paste_take_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_command(label='Delete Section', command=self.delete_section)
+    self.delete_section_index = self.edit_menu.index('end')
+
+    self.edit_menu.add_command(label='Clear Document', command=lambda: self._tem.setText(''))
+    self.clear_doc_index = self.edit_menu.index('end')
+
+    # Move menu
+    self.move_menu = tk.Menu(self.menu, tearoff=0)
+    self.menu.add_cascade(label='Move', menu=self.move_menu)
+
+    self.move_menu.add_command(label='Cursor to Start', command=lambda: self._tem.moveCursorTo(Location(0, 0)))
+    self.cursor_start_index = self.move_menu.index('end')
+
+    self.move_menu.add_command(label='Cursor to End', command=lambda: self._tem.moveCursorTo(Location(len(self._tem.lines) - 1, len(self._tem.lines[-1]))))
+    self.cursor_end_index = self.move_menu.index('end')
+
+    # Plugins menu
+    self.plugins_menu = tk.Menu(self.menu, tearoff=0)
+    self.load_plugins()
+
+  def load_plugins(self):
+    plugin_folder = 'plugins'
+    for filename in os.listdir(plugin_folder):
+      if filename.endswith('.py') and not filename.startswith('__'):
+        filepath = os.path.join(plugin_folder, filename)
+        module_name = f"plugins.{filename[:-3]}"
+
+        spec = importlib.util.spec_from_file_location(module_name, filepath)
+        if spec and spec.loader:
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          for _, obj in inspect.getmembers(module, inspect.isclass):
+            if issubclass(obj, Plugin) and obj is not Plugin:
+              instance = obj()
+              self._plugins.append(instance)
+
+              self.plugins_menu.add_command(
+                label=instance.getName(),
+                command=lambda p=instance: p.execute(self._tem, self._tem.undoManager, self._clipboardStack)
+              )
+
+    self.menu.add_cascade(label='Plugins', menu=self.plugins_menu)
+
 
   def _setup_binds(self):
     self.bind('<Key>', self.handle_key_press)
@@ -76,6 +144,7 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
         self._clipboardStack.push(text)
         self._tem.deleteRange(selection)
         self._tem.setSelectionRange(None)
+        self.updateMenu() # new
 
   def copy(self):
     selection = self._tem.getSelectionRange()
@@ -83,6 +152,7 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
       text = self._tem.getSelectedText(selection)
       if text:
         self._clipboardStack.push(text)
+        self.updateMenu() # new
 
   def paste(self, take=False):
     clip_text = self._clipboardStack.pop() if take else self._clipboardStack.peek()
@@ -93,8 +163,11 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
       self._tem.insert(clip_text)
 
   def delete_section(self):
-    full_range = LocationRange(Location(0, 0), Location(len(self._tem.lines) - 1, len(self._tem.lines[-1])))
-    self._tem.setSelectionRange(full_range)
+    selection = self._tem.getSelectionRange()
+    if selection:
+      self._tem.deleteRange(selection)
+      self._tem.setSelectionRange(None)
+
 
   def handle_key_press(self, event):
     shift = (event.state & 0x0001) != 0
@@ -117,8 +190,7 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
 
     elif event.keysym == 'BackSpace':
       if self._tem.getSelectionRange():
-        self._tem.deleteRange(self._tem.getSelectionRange())
-        self._tem.setSelectionRange(None)
+        self.delete_section()
       else:
         self._tem.deleteBefore()
 
@@ -156,6 +228,9 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
     self.updateCursorLocation()
 
   def updateText(self):
+    self.updateMenu()
+    self.updateStatus() # does it make sense to update from update function?
+
     self._canvas.delete('text')
     self._canvas.delete('selection')
 
@@ -174,6 +249,9 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
       self._canvas.create_text(0, row * (font_size + 5), text=line, font=self.font, anchor='nw', tags='text')
 
   def updateCursorLocation(self, loc: Location = None):
+    self.updateMenu()
+    self.updateStatus()
+
     self._canvas.delete('cursor')
     if loc is None:
       loc = self._tem.cursorLocation
@@ -181,6 +259,25 @@ class TextEditor(tk.Frame, CursorObserver, TextObserver, ClipboardObserver):
     x = col * self.char_width
     y = row * (font_size + 6)
     self._canvas.create_line(x, y, x, y + font_size, fill='black', width=3, tags='cursor')
+
+  def updateMenu(self): # CHECK!!!!!!
+    has_selection = self._tem.getSelectionRange() is not None
+    has_undo = self._tem.undoManager.undoStack
+    has_redo = self._tem.undoManager.redoStack
+    clipboard_content = True if self._clipboardStack.peek() else False
+
+    self.edit_menu.entryconfig(self.undo_index, state=tk.NORMAL if has_undo else tk.DISABLED)
+    self.edit_menu.entryconfig(self.redo_index, state=tk.NORMAL if has_redo else tk.DISABLED)
+    self.edit_menu.entryconfig(self.cut_index, state=tk.NORMAL if has_selection else tk.DISABLED)
+    self.edit_menu.entryconfig(self.copy_index, state=tk.NORMAL if has_selection else tk.DISABLED)
+    self.edit_menu.entryconfig(self.paste_index, state=tk.NORMAL if clipboard_content else tk.DISABLED)
+    self.edit_menu.entryconfig(self.paste_take_index, state=tk.NORMAL if clipboard_content else tk.DISABLED)
+    self.edit_menu.entryconfig(self.delete_section_index, state=tk.NORMAL if has_selection else tk.DISABLED)
+
+  def updateStatus(self):
+    cursor = self._tem.cursorLocation
+    num_lines = len(self._tem.lines)
+    self._status.config(text=f'Ln {cursor.row+1}, Col {cursor.column+1} | {num_lines} lines')
 
   def updateClipboard(self):
     pass
