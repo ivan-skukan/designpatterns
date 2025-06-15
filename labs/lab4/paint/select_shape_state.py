@@ -2,6 +2,7 @@ from state import State
 from point import Point
 from geometry_util import GeometryUtil
 from document_model import DocumentModel
+from composite_shape import CompositeShape
 
 class SelectShapeState(State):
   def __init__(self, model):
@@ -44,7 +45,7 @@ class SelectShapeState(State):
       self.dragging_object.setHotPoint(self.dragging_hotpoint_index, mousePoint)
       self.model.notifyListeners()
 
-  def mouseUp(self, mousePoint):
+  def mouseUp(self, mousePoint, shiftDown, ctrlDown):
     if self.dragging_object and self.dragging_hotpoint_index is not None:
       self.dragging_object.setHotPointSelected(self.dragging_hotpoint_index, False)
 
@@ -52,8 +53,34 @@ class SelectShapeState(State):
     self.dragging_hotpoint_index = None
 
   def keyPressed(self, keyCode):
+    print(f"Key pressed: {keyCode}")
     if not self.selected_objects:
       return
+
+    if keyCode == 42:
+      print("here?")
+      if len(self.selected_objects) > 1:
+        print("here")
+        composite = CompositeShape(self.selected_objects.copy())
+
+        for obj in self.selected_objects:
+          self.model.removeGraphicalObject(obj)
+
+        self.model.addGraphicalObject(composite)
+        self.selected_objects = [composite]
+        self.model.notifyListeners()
+
+    elif keyCode == 30:
+      if len(self.selected_objects) == 1:
+        obj = self.selected_objects[0]
+        if isinstance(obj, CompositeShape):
+          self.model.removeGraphicalObject(obj)
+
+          for child in obj.children:
+            self.model.addGraphicalObject(child)
+
+          self.selected_objects = obj.children.copy()
+          self.model.notifyListeners()
 
     dx, dy = 0, 0
     if keyCode == 37:   # left
