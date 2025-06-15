@@ -28,9 +28,14 @@ class GUI(tk.Frame):
                          command=lambda p=proto: self.setState(AddShapeState(self.model, p)))
       button.pack(side='left')
 
+    select_button = tk.Button(toolbar, text="Selektiraj",
+                          command=lambda: self.setState(SelectShapeState(self.model)))
+    select_button.pack(side='left')
+
     # manual adding for testing
     self.model.addGraphicalObject(LineSegment(Point(300, 300), Point(200, 200)))
     self.model.addGraphicalObject(Oval(Point(100, 100), Point(200, 200)))
+    # fin manual adding
 
     self.canvas = tk.Canvas(self, bg='white')
     self.canvas.pack(fill='both', expand=True)
@@ -62,8 +67,10 @@ class GUI(tk.Frame):
     self.repaint()
 
   def _on_mouse_down(self, event):
-    self._currentState.mouseDown(Point(event.x, event.y), False, False)
-
+    shift = event.state & 0x1 
+    ctrl = event.state & 0x4
+    self._currentState.mouseDown(Point(event.x, event.y), shift, ctrl)
+  
   def _on_mouse_up(self, event):
     self._currentState.mouseUp(Point(event.x, event.y), False, False)
 

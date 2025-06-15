@@ -38,9 +38,11 @@ class DocumentModel(GraphicalObjectListener):
     if l in self._listeners:
       self._listeners.remove(l)
 
-  def notifyListeners(self):
+  def notifyListeners(self, txt=None):
     for l in self._listeners:
       l.document_change(self)
+    print(f"DocumentModel: Notified listeners about change: {txt if txt else 'No specific change'}")
+
 
   def getSelectedObjects(self):
     return self._selected_objects.copy()

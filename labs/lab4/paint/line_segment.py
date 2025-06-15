@@ -2,6 +2,7 @@ from abstract_graphical_object import AbstractGraphicalObject
 from graphical_object import GraphicalObject
 from point import Point
 from rectangle import Rectangle
+from geometry_util import GeometryUtil
 
 
 class LineSegment(AbstractGraphicalObject):

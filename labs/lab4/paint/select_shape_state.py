@@ -1,88 +1,109 @@
+from state import State
 from point import Point
+from geometry_util import GeometryUtil
+from document_model import DocumentModel
 
-class SelectShapeState:
+class SelectShapeState(State):
   def __init__(self, model):
     self.model = model
     self.selected_objects = []
-    self.dragging = False
-    self.drag_hot_point_index = None
-    self.drag_start_point = None
+    self.dragging_object = None
+    self.dragging_hotpoint_index = None
 
   def mouseDown(self, mousePoint, shiftDown, ctrlDown):
-    obj = self.model.findSelectedGraphicalObject(mousePoint)
-    if obj:
+    PROXIMITY = DocumentModel.SELECTION_PROXIMITY
+
+    if len(self.selected_objects) == 1:
+      clicked_object = self.selected_objects[0]
+      for i in range(clicked_object.getNumberOfHotPoints()):
+        hp = clicked_object.getHotPoint(i)
+        if GeometryUtil.distanceFromPoint(hp, mousePoint) <= PROXIMITY:
+          self.dragging_object = clicked_object
+          self.dragging_hotpoint_index = i
+          clicked_object.setHotPointSelected(i, True)
+          return
+
+    clicked_object = self.model.findSelectedGraphicalObject(mousePoint)
+
+    if clicked_object:
       if ctrlDown:
-        # dodaj u selekciju
-        if obj not in self.selected_objects:
-          self.selected_objects.append(obj)
-          obj.setselected(True)
+        if clicked_object in self.selected_objects:
+          self.selected_objects.remove(clicked_object)
+        else:
+          self.selected_objects.append(clicked_object)
       else:
-        # bez ctrl - selektiraj samo taj objekt
-        for o in self.selected_objects:
-          o.setselected(False)
-        self.selected_objects = [obj]
-        obj.setselected(True)
-
-      # Ako je točno jedan objekt selektiran, provjeri hot-point
-      if len(self.selected_objects) == 1:
-        go = self.selected_objects[0]
-        # Pretpostavimo da imaš metodu koja vraća indeks hot-pointa ako je kliknut blizu njega
-        self.drag_hot_point_index = go.hotPointIndexAt(mousePoint)
-        if self.drag_hot_point_index is not None:
-          self.dragging = True
-          self.drag_start_point = mousePoint
+        self.selected_objects = [clicked_object]
+      self.model.notifyListeners(clicked_object.getShapeName())
     else:
-      # Kliknuto prazno, odselektiraj sve
-      for o in self.selected_objects:
-        o.setselected(False)
-      self.selected_objects = []
-
-    self.model.notifyListeners()
-
-  def mouseUp(self, mousePoint, shiftDown, ctrlDown):
-    self.dragging = False
-    self.drag_hot_point_index = None
+      if not ctrlDown:
+        self.selected_objects.clear()
+        self.model.notifyListeners(None)
 
   def mouseDragged(self, mousePoint):
-    if self.dragging and len(self.selected_objects) == 1:
-      go = self.selected_objects[0]
-      go.setHotPoint(self.drag_hot_point_index, mousePoint)
-      self.model.graphicalObjectChanged(go)
+    if self.dragging_object and self.dragging_hotpoint_index is not None:
+      self.dragging_object.setHotPoint(self.dragging_hotpoint_index, mousePoint)
+      self.model.notifyListeners()
+
+  def mouseUp(self, mousePoint):
+    if self.dragging_object and self.dragging_hotpoint_index is not None:
+      self.dragging_object.setHotPointSelected(self.dragging_hotpoint_index, False)
+
+    self.dragging_object = None
+    self.dragging_hotpoint_index = None
 
   def keyPressed(self, keyCode):
     if not self.selected_objects:
       return
-    if keyCode in (37, 38, 39, 40):
-      dx = dy = 0
-      if keyCode == 37: dx = -1
-      if keyCode == 39: dx = 1
-      if keyCode == 38: dy = -1
-      if keyCode == 40: dy = 1
-      for o in self.selected_objects:
-        o.translate(dx, dy)
-        self.model.graphicalObjectChanged(o)
-    elif keyCode == 43:  # '+'
-      for o in self.selected_objects:
-        self.model.increaseZ(o)
-    elif keyCode == 45:  # '-'
-      for o in self.selected_objects:
-        self.model.decreaseZ(o)
 
-  def afterDraw(self, r, go=None):
-    if go is not None:
-      if go in self.selected_objects:
-        bbox = go.boundingBox() 
-        x0, y0, x1, y1 = bbox
-        r.drawRect(x0, y0, x1, y1, color='blue')
+    dx, dy = 0, 0
+    if keyCode == 37:   # left
+      dx = -1
+    elif keyCode == 38: # up
+      dy = -1
+    elif keyCode == 39: # right
+      dx = 1
+    elif keyCode == 40: # down
+      dy = 1
 
-        if len(self.selected_objects) == 1:
-          go.drawHotPoints(r)
-    else:
-      pass
+    if dx != 0 or dy != 0:
+      for go in self.selected_objects:
+        go.translate(Point(dx, dy))
+
+    if keyCode == 43: # '+'
+      for go in self.selected_objects:
+        self.model.increaseZ(go)
+    elif keyCode == 45: # '-'
+      for go in self.selected_objects:
+        self.model.decreaseZ(go)
+
+    self.model.notifyListeners()
+
+  def afterDraw(self, renderer, go=None):
+    if go is not None and go in self.selected_objects:
+      # Draw bounding box
+      rect = go.getBoundingBox()
+      points = [
+        Point(rect.x, rect.y),
+        Point(rect.x + rect.width, rect.y),
+        Point(rect.x + rect.width, rect.y + rect.height),
+        Point(rect.x, rect.y + rect.height)
+      ]
+      for i in range(4):
+        renderer.drawLine(points[i], points[(i + 1) % 4])
+
+      if len(self.selected_objects) == 1:
+        for i in range(go.getNumberOfHotPoints()):
+          hp = go.getHotPoint(i)
+          size = 3
+          renderer.fillPolygon([
+            Point(hp.x - size, hp.y - size),
+            Point(hp.x + size, hp.y - size),
+            Point(hp.x + size, hp.y + size),
+            Point(hp.x - size, hp.y + size)
+          ])
 
   def onLeaving(self):
-    # deselect sve
-    for o in self.selected_objects:
-      o.setselected(False)
-    self.selected_objects = []
+    self.selected_objects.clear()
+    self.dragging_object = None
+    self.dragging_hotpoint_index = None
     self.model.notifyListeners()

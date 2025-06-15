@@ -14,7 +14,7 @@ class Oval(AbstractGraphicalObject):
     super().__init__([right_hot_point, bottom_hot_point])
 
   def selectionDistance(self, mousePoint: Point) -> float:
-    return GeometryUtil.distanceFromLineSegment(self.right_hot_point, self.bottom_hot_point, mousePoint)
+    return GeometryUtil.distanceFromLineSegment(self._hot_points[0], self._hot_points[1], mousePoint)
   def getBoundingBox(self) -> Rectangle:
     minx = min(self._hot_points[0].x, self._hot_points[1].x)
     miny = min(self._hot_points[0].y, self._hot_points[1].y)
