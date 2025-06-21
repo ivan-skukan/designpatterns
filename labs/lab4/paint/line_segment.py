@@ -26,7 +26,6 @@ class LineSegment(AbstractGraphicalObject):
     return Rectangle(x, y, width, height)
 
   def duplicate(self) -> GraphicalObject:
-    # copy hot points but do NOT copy listeners
     return LineSegment(Point(self._hot_points[0].x, self._hot_points[0].y),
                        Point(self._hot_points[1].x, self._hot_points[1].y))
 

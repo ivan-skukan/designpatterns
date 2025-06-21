@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.filedialog as filedialog
 from document_model import DocumentModel
 from tkrenderer import TkRenderer
 from line_segment import LineSegment
@@ -7,6 +8,7 @@ from point import Point
 from idle_state import IdleState
 from add_shape_state import AddShapeState
 from select_shape_state import SelectShapeState
+from svg import SVGRendererImpl
 
 
 class GUI(tk.Frame):
@@ -31,6 +33,9 @@ class GUI(tk.Frame):
     select_button = tk.Button(toolbar, text="Selektiraj",
                           command=lambda: self.setState(SelectShapeState(self.model)))
     select_button.pack(side='left')
+
+    svg_button = tk.Button(toolbar, text="SVG Export", command=self.export_to_svg)
+    svg_button.pack(side='left')
 
     # manual adding for testing
     self.model.addGraphicalObject(LineSegment(Point(300, 300), Point(200, 200)))
@@ -82,3 +87,11 @@ class GUI(tk.Frame):
       self.setState(IdleState())
     else:
       self._currentState.keyPressed(event.keycode)
+
+  def export_to_svg(self):
+    file_name = filedialog.asksaveasfilename(defaultextension=".svg", filetypes=[("SVG files", "*.svg")])
+    if file_name:
+      renderer = SVGRendererImpl(file_name)
+      for go in self.model.list():
+        go.render(renderer)
+      renderer.close()

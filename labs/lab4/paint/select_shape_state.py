@@ -57,7 +57,7 @@ class SelectShapeState(State):
     if not self.selected_objects:
       return
 
-    if keyCode == 42:
+    if keyCode == 42: # g
       print("here?")
       if len(self.selected_objects) > 1:
         print("here")
@@ -70,7 +70,7 @@ class SelectShapeState(State):
         self.selected_objects = [composite]
         self.model.notifyListeners()
 
-    elif keyCode == 30:
+    elif keyCode == 30: # u
       if len(self.selected_objects) == 1:
         obj = self.selected_objects[0]
         if isinstance(obj, CompositeShape):
@@ -107,7 +107,6 @@ class SelectShapeState(State):
 
   def afterDraw(self, renderer, go=None):
     if go is not None and go in self.selected_objects:
-      # Draw bounding box
       rect = go.getBoundingBox()
       points = [
         Point(rect.x, rect.y),
